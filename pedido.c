@@ -1,131 +1,112 @@
+// pedido.c
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "pedido.h"
 
-// Cria um novo pedido
-Pedido* criarPedido(int id) {
-    Pedido* novo = (Pedido*)malloc(sizeof(Pedido));
-    novo->id = id;
-    novo->qtdPratos = 0;
-    novo->proximo = NULL;
-    return novo;
+// Contador global para IDs de pedidos
+static int nextID = 1;
+
+// Função para criar um novo pedido com um ID sequencial
+Pedido* criarPedido(void) {
+    Pedido* pedido = malloc(sizeof(Pedido));
+    if (pedido == NULL) {
+        perror("Erro ao alocar memória para o pedido");
+        exit(EXIT_FAILURE);
+    }
+    pedido->id = nextID++;
+    pedido->pratos = NULL;
+    pedido->next = NULL;
+    return pedido;
 }
 
-// Adiciona um prato ao pedido
+// Função para adicionar um prato ao pedido
 void adicionarPrato(Pedido* pedido, const char* nomePrato) {
-    if (pedido->qtdPratos < MAX_PRATOS) {
-        strcpy(pedido->pratos[pedido->qtdPratos].nome, nomePrato);
-        pedido->qtdPratos++;
-    } else {
-        printf("Número máximo de pratos atingido!\n");
+    Prato* prato = malloc(sizeof(Prato));
+    if (prato == NULL) {
+        perror("Erro ao alocar memória para o prato");
+        exit(EXIT_FAILURE);
     }
+    strncpy(prato->nome, nomePrato, MAX_NOME);
+    prato->nome[MAX_NOME - 1] = '\0';
+    prato->next = pedido->pratos;
+    pedido->pratos = prato;
 }
 
-// Remove um prato do pedido
-void removerPrato(Pedido* pedido, const char* nomePrato) {
-    int i;
-    for (i = 0; i < pedido->qtdPratos; i++) {
-        if (strcmp(pedido->pratos[i].nome, nomePrato) == 0) {
-            // Remover o prato deslocando os outros
-            for (int j = i; j < pedido->qtdPratos - 1; j++) {
-                strcpy(pedido->pratos[j].nome, pedido->pratos[j + 1].nome);
+// Função para remover um prato do pedido
+void removerPrato(Pedido* listaPedidos, const char* nomePrato) {
+    Pedido* pedido = listaPedidos;
+    while (pedido != NULL) {
+        Prato* anterior = NULL;
+        Prato* atual = pedido->pratos;
+        while (atual != NULL) {
+            if (strcmp(atual->nome, nomePrato) == 0) {
+                if (anterior == NULL) {
+                    pedido->pratos = atual->next;
+                } else {
+                    anterior->next = atual->next;
+                }
+                free(atual);
+                printf("Prato '%s' removido do pedido ID %d\n", nomePrato, pedido->id);
+                return;
             }
-            pedido->qtdPratos--;
-            printf("Prato removido com sucesso!\n");
-            return;
+            anterior = atual;
+            atual = atual->next;
         }
+        pedido = pedido->next;
     }
-    printf("Prato não encontrado!\n");
+    printf("Prato '%s' não encontrado\n", nomePrato);
 }
 
-// Adiciona um pedido à lista ligada
-void adicionarPedidoLista(Pedido** lista, Pedido* novoPedido) {
-    novoPedido->proximo = *lista;
-    *lista = novoPedido;
+// Função para adicionar um pedido à lista de pedidos
+void adicionarPedidoLista(Pedido** listaPedidos, Pedido* pedido) {
+    pedido->next = *listaPedidos;
+    *listaPedidos = pedido;
 }
 
-// Remove um pedido da lista ligada pelo ID
-void removerPedidoLista(Pedido** lista, int id) {
-    Pedido* atual = *lista;
-    Pedido* anterior = NULL;
-
-    while (atual != NULL && atual->id != id) {
-        anterior = atual;
-        atual = atual->proximo;
-    }
-
-    if (atual == NULL) {
-        printf("Pedido não encontrado!\n");
+// Função para transferir pedidos da lista para a fila
+void transferirParaFila(Pedido** listaPedidos, Fila* fila) {
+    if (*listaPedidos == NULL) {
+        printf("Nenhum pedido pendente para processar\n");
         return;
     }
-
-    if (anterior == NULL) {
-        *lista = atual->proximo;
+    Pedido* pedido = *listaPedidos;
+    *listaPedidos = pedido->next;
+    pedido->next = NULL;
+    
+    if (fila->final == NULL) {
+        fila->inicio = fila->final = pedido;
     } else {
-        anterior->proximo = atual->proximo;
+        fila->final->next = pedido;
+        fila->final = pedido;
     }
-
-    free(atual);
-    printf("Pedido removido com sucesso!\n");
+    printf("Pedido ID %d transferido para a fila\n", pedido->id);
 }
 
-// Lista todos os pedidos pendentes
-void listarPedidosPendentes(Pedido* lista) {
-    Pedido* atual = lista;
-    while (atual != NULL) {
-        printf("Pedido ID: %d\n", atual->id);
-        for (int i = 0; i < atual->qtdPratos; i++) {
-            printf("  Prato: %s\n", atual->pratos[i].nome);
+// Função para listar pedidos pendentes
+void listarPedidosPendentes(Pedido* listaPedidos) {
+    while (listaPedidos != NULL) {
+        printf("Pedido ID %d:\n", listaPedidos->id);
+        Prato* prato = listaPedidos->pratos;
+        while (prato != NULL) {
+            printf("  Prato: %s\n", prato->nome);
+            prato = prato->next;
         }
-        atual = atual->proximo;
+        listaPedidos = listaPedidos->next;
     }
 }
 
-// Transfere um pedido da lista para a fila
-void transferirParaFila(Pedido** lista, Fila* fila) {
-    if (*lista == NULL) {
-        printf("Nenhum pedido para transferir!\n");
-        return;
-    }
-
-    Pedido* pedido = *lista;
-    *lista = (*lista)->proximo;
-    pedido->proximo = NULL;
-
-    if (fila->tras == NULL) {
-        fila->frente = fila->tras = pedido;
-    } else {
-        fila->tras->proximo = pedido;
-        fila->tras = pedido;
-    }
-
-    printf("Pedido %d transferido para a fila de processamento.\n", pedido->id);
-}
-
-// Lista os pedidos na fila
+// Função para listar pedidos na fila
 void listarFila(Fila* fila) {
-    Pedido* atual = fila->frente;
-    while (atual != NULL) {
-        printf("Pedido ID: %d em processamento.\n", atual->id);
-        atual = atual->proximo;
+    Pedido* pedido = fila->inicio;
+    while (pedido != NULL) {
+        printf("Pedido ID %d:\n", pedido->id);
+        Prato* prato = pedido->pratos;
+        while (prato != NULL) {
+            printf("  Prato: %s\n", prato->nome);
+            prato = prato->next;
+        }
+        pedido = pedido->next;
     }
-}
-
-// Processa o próximo pedido na fila
-void processarFila(Fila* fila) {
-    if (fila->frente == NULL) {
-        printf("Nenhum pedido para processar!\n");
-        return;
-    }
-
-    Pedido* pedido = fila->frente;
-    fila->frente = fila->frente->proximo;
-
-    if (fila->frente == NULL) {
-        fila->tras = NULL;
-    }
-
-    printf("Processando pedido %d.\n", pedido->id);
-    free(pedido);
 }

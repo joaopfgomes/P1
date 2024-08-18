@@ -1,37 +1,36 @@
+// pedido.h
+
 #ifndef PEDIDO_H
 #define PEDIDO_H
 
-#define MAX_PRATOS 10
-#define MAX_NOME 50
+#define MAX_NOME 100
 
-// Estrutura para armazenar pratos do pedido
-typedef struct {
+// Estrutura para armazenar um prato
+typedef struct Prato {
     char nome[MAX_NOME];
+    struct Prato* next;
 } Prato;
 
-// Nó da lista ligada
+// Estrutura para armazenar um pedido
 typedef struct Pedido {
     int id;
-    Prato pratos[MAX_PRATOS];
-    int qtdPratos;
-    struct Pedido* proximo;
+    Prato* pratos; // Ponteiro para a lista ligada de pratos
+    struct Pedido* next; // Ponteiro para o próximo pedido
 } Pedido;
 
-// Estrutura da fila de processamento
-typedef struct {
-    Pedido* frente;
-    Pedido* tras;
+// Estrutura para a fila de pedidos
+typedef struct Fila {
+    Pedido* inicio;
+    Pedido* final;
 } Fila;
 
-// Funções para manipular a lista ligada e a fila
-Pedido* criarPedido(int id);
+// Protótipos das funções
+Pedido* criarPedido(void);
 void adicionarPrato(Pedido* pedido, const char* nomePrato);
-void removerPrato(Pedido* pedido, const char* nomePrato);
-void adicionarPedidoLista(Pedido** lista, Pedido* novoPedido);
-void removerPedidoLista(Pedido** lista, int id);
-void listarPedidosPendentes(Pedido* lista);
-void transferirParaFila(Pedido** lista, Fila* fila);
+void removerPrato(Pedido* listaPedidos, const char* nomePrato);
+void adicionarPedidoLista(Pedido** listaPedidos, Pedido* pedido);
+void transferirParaFila(Pedido** listaPedidos, Fila* fila);
+void listarPedidosPendentes(Pedido* listaPedidos);
 void listarFila(Fila* fila);
-void processarFila(Fila* fila);
 
-#endif
+#endif // PEDIDO_H
