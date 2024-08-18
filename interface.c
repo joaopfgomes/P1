@@ -1,5 +1,3 @@
-// interface.c
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "pedido.h"
@@ -7,7 +5,7 @@
 int main() {
     Pedido* listaPedidos = NULL;
     Fila fila = {NULL, NULL}; // Inicializa a fila com ponteiros nulos
-    int opcao, pratoEscolhido;
+    int opcao, pratoEscolhido, id = 1;
     
     while (1) {
         printf("\nMenu de Opções:\n");
@@ -22,7 +20,7 @@ int main() {
 
         switch (opcao) {
             case 1: {
-                Pedido* pedido = criarPedido();
+                Pedido* pedido = criarPedido(id++);
                 printf("Pedido criado com ID: %d\n", pedido->id);
 
                 while (1) {
